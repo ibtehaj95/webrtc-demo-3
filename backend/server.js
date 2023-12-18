@@ -11,7 +11,8 @@ app.use(cors());
 let senderStream = null;
 
 const handleTrackEvent = (e, peer) => {
-    console.log("handleTrackEvent", e.streams[0]);
+    console.log("handleTrackEvent");
+    e.streams[0].getTracks().forEach(track => console.log(track.id, track.kind, track.enabled, track.readyState));
     senderStream = e.streams[0];
 };
 
@@ -34,7 +35,7 @@ app.post("/consumer", async ({body}, res) => {
     await peer.setRemoteDescription(desc);
     // console.log("consumer's stream", senderStream);
     senderStream.getTracks().forEach(track => {
-        console.log("adding track", track);
+        console.log("adding track", track.id, track.kind, track.enabled, track.readyState);
         peer.addTrack(track, senderStream)
     });
     const answer = await peer.createAnswer();

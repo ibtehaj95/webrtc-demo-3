@@ -35,7 +35,7 @@ function App (){
     // };
 
     const getUserMedia = () => {
-        const constraints = { video: true, audio: true }; // specify what kind of streams we want
+        const constraints = { video: true, audio: false }; // specify what kind of streams we want
         // prompt the user for permission to use specified devices
         // note that if a user has multiple cameras/microphones, we can find those out (enumerate) specify which ones to use, otherwise OS default will be used
         // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API
@@ -116,7 +116,7 @@ function App (){
             }); // create a new RTCPeerConnection
 
             pc.ontrack = (e) => {
-                console.log("ontrack");
+                console.log("ontrack", e.streams[0]);
                 remoteVideoRef.current.srcObject = e.streams[0]; // set the source of the video element to the received stream
             }
 
