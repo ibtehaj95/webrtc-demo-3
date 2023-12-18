@@ -35,7 +35,7 @@ function App (){
     // };
 
     const getUserMedia = () => {
-        const constraints = { video: true, audio: false }; // specify what kind of streams we want
+        const constraints = { video: true, audio: true }; // specify what kind of streams we want
         // prompt the user for permission to use specified devices
         // note that if a user has multiple cameras/microphones, we can find those out (enumerate) specify which ones to use, otherwise OS default will be used
         // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API
@@ -50,10 +50,6 @@ function App (){
             .catch(error => {
                 console.error("Error accessing media devices.", error);
             });
-    };
-
-    const addTrncvr = () => {
-        pcRef.current.addTransceiver("video", {direction: "recvonly"});
     };
 
     useEffect(() => {
@@ -83,6 +79,9 @@ function App (){
             // }
     
             pc.onnegotiationneeded = async () => {
+                console.log("negotiation needed");
+                // console.log(pc);
+                // pc.getSenders().forEach(sender => console.log(sender.track));
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 const payload = {
@@ -140,9 +139,9 @@ function App (){
                 const desc = new RTCSessionDescription(data.sdp);
                 await pc.setRemoteDescription(desc);
             };
-
+            pc.addTransceiver("video", {direction: "recvonly"});
+            pc.addTransceiver("audio", {direction: "recvonly"});    //if you want to receive audio
             pcRef.current = pc;
-            addTrncvr();
         }
 
         else{
@@ -163,7 +162,7 @@ function App (){
                     <video
                         ref={localVideoRef}
                         autoPlay
-                        muted
+                        muted={true}
                         className="local-video"
                         style={{
                             width: 480, 
@@ -175,7 +174,7 @@ function App (){
                     <video
                         ref={remoteVideoRef}
                         autoPlay
-                        muted
+                        muted={false}   //if you want to receive audio
                         className="remote-video"
                         style={{
                             width: 480, 

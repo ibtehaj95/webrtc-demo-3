@@ -11,6 +11,7 @@ app.use(cors());
 let senderStream = null;
 
 const handleTrackEvent = (e, peer) => {
+    console.log("handleTrackEvent", e.streams[0]);
     senderStream = e.streams[0];
 };
 
@@ -31,11 +32,12 @@ app.post("/consumer", async ({body}, res) => {
         });
     const desc = new webrtc.RTCSessionDescription(body.sdp);
     await peer.setRemoteDescription(desc);
-    const answer = await peer.createAnswer();
+    // console.log("consumer's stream", senderStream);
     senderStream.getTracks().forEach(track => {
-        console.log("addTrack", track, senderStream);
+        console.log("adding track", track);
         peer.addTrack(track, senderStream)
     });
+    const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
     const payload = {
         sdp: peer.localDescription
@@ -46,8 +48,7 @@ app.post("/consumer", async ({body}, res) => {
 // client wants to broadcast
 app.post("/broadcast", async ({body}, res) => {
     console.log("broadcast");
-    const peer = new webrtc.RTCPeerConnection(
-        {
+    const peer = new webrtc.RTCPeerConnection({
             iceServers: [
                 {
                     urls: "stun:stun.stunprotocol.org"
