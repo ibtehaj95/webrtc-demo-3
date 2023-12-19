@@ -7,7 +7,8 @@ function App (){
 
     const localVideoRef = useRef(null);
     const remoteVideoRef = useRef(null);
-    const pcRef = useRef(null);
+    const pcRef1 = useRef(null);
+    const pcRef2 = useRef(null);
     const textRef = useRef(null);
     // const [cameraOn, setCameraOn] = useState(false);
     const [role, setRole] = useState(null);
@@ -34,7 +35,7 @@ function App (){
     //         });
     // };
 
-    const getUserMedia = () => {
+    const getUserMedia1 = () => {
         const constraints = { video: true, audio: false }; // specify what kind of streams we want
         // prompt the user for permission to use specified devices
         // note that if a user has multiple cameras/microphones, we can find those out (enumerate) specify which ones to use, otherwise OS default will be used
@@ -42,7 +43,7 @@ function App (){
         navigator.mediaDevices.getUserMedia(constraints)
             .then(stream => {
                 localVideoRef.current.srcObject = stream; // set the source of the video element to the captured stream, this is for you to see yourself
-                stream.getTracks().forEach(track => pcRef.current.addTrack(track, stream)); // add the stream to the RTCPeerConnection object, this is for the other party to see you
+                stream.getTracks().forEach(track => pcRef1.current.addTrack(track, stream)); // add the stream to the RTCPeerConnection object, this is for the other party to see you
                 // stream.getTracks().forEach(track => console.log(track)); // print the tracks in the stream
                 // remoteVideoRef.current.srcObject = stream; // only for testing
                 // setCameraOn(true); // disable the start camera button
@@ -50,6 +51,54 @@ function App (){
             .catch(error => {
                 console.error("Error accessing media devices.", error);
             });
+    };
+
+    const getUserMedia2 = () => {
+        const constraints = { video: true, audio: false }; // specify what kind of streams we want
+        // prompt the user for permission to use specified devices
+        // note that if a user has multiple cameras/microphones, we can find those out (enumerate) specify which ones to use, otherwise OS default will be used
+        // https://developer.mozilla.org/en-US/docs/Web/API/Media_Capture_and_Streams_API
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                localVideoRef.current.srcObject = stream; // set the source of the video element to the captured stream, this is for you to see yourself
+                stream.getTracks().forEach(track => pcRef2.current.addTrack(track, stream)); // add the stream to the RTCPeerConnection object, this is for the other party to see you
+                // stream.getTracks().forEach(track => console.log(track)); // print the tracks in the stream
+                // remoteVideoRef.current.srcObject = stream; // only for testing
+                // setCameraOn(true); // disable the start camera button
+            })
+            .catch(error => {
+                console.error("Error accessing media devices.", error);
+            });
+    };
+
+    const handleStartStreaming1 = async () => {
+        console.log("handleStartStreaming1");
+        const response = await fetch('http://localhost:3000/startstreaming1', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        console.log(data);
+        const desc = new RTCSessionDescription(data.sdp);
+        await pcRef1.current.setRemoteDescription(desc);
+    };
+
+    const handleStartStreaming2 = async () => {
+        console.log("handleStartStreaming2");
+        const response = await fetch('http://localhost:3000/startstreaming2', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            // body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        console.log(data);
+        const desc = new RTCSessionDescription(data.sdp);
+        await pcRef2.current.setRemoteDescription(desc);
     };
 
     useEffect(() => {
@@ -74,9 +123,10 @@ function App (){
             //     console.log("ICE Connection State Change", e); // connected, disconnected, failed, closed
             // };
     
-            // pc.ontrack = (e) => {
-            //     remoteVideoRef.current.srcObject = e.streams[0]; // set the source of the video element to the received stream
-            // }
+            pc.ontrack = (e) => {
+                console.log("ontrack1", e.streams[0]);
+                remoteVideoRef.current.srcObject = e.streams[0]; // set the source of the video element to the received stream
+            }
     
             pc.onnegotiationneeded = async () => {
                 console.log("negotiation needed");
@@ -88,7 +138,7 @@ function App (){
                     sdp: pc.localDescription
                 };
                 // const { data } = await axios.post("/broadcast", payload);    //doing this with fetch
-                const response = await fetch('http://localhost:3000/broadcast', {
+                const response = await fetch('http://localhost:3000/upload1', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -96,13 +146,14 @@ function App (){
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
-                const desc = new RTCSessionDescription(data.sdp);
-                await pc.setRemoteDescription(desc);
+                console.log(data);
+                // const desc = new RTCSessionDescription(data.sdp);
+                // await pc.setRemoteDescription(desc);
             };
     
-            pcRef.current = pc; // store the RTCPeerConnection object in the ref, we are using pcRef like a global variable
+            pcRef1.current = pc; // store the RTCPeerConnection object in the ref, we are using pcRef like a global variable
             // from this point on, pc will not be addressed directly, but rather through pcRef.current, because it doesn't exist outside of this useEffect block
-            getUserMedia();
+            getUserMedia1();
         }
 
         else if(role === "viewer"){
@@ -116,7 +167,7 @@ function App (){
             }); // create a new RTCPeerConnection
 
             pc.ontrack = (e) => {
-                console.log("ontrack", e.streams[0]);
+                console.log("ontrack2", e.streams[0]);
                 remoteVideoRef.current.srcObject = e.streams[0]; // set the source of the video element to the received stream
             }
 
@@ -128,7 +179,7 @@ function App (){
                     sdp: pc.localDescription
                 };
                 // const { data } = await axios.post("/consumer", payload);    //doing this with fetch
-                const response = await fetch('http://localhost:3000/consumer', {
+                const response = await fetch('http://localhost:3000/upload2', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -136,12 +187,14 @@ function App (){
                     body: JSON.stringify(payload)
                 });
                 const data = await response.json();
-                const desc = new RTCSessionDescription(data.sdp);
-                await pc.setRemoteDescription(desc);
+                console.log(data);
+                // const desc = new RTCSessionDescription(data.sdp);
+                // await pc.setRemoteDescription(desc);
             };
-            pc.addTransceiver("video", {direction: "recvonly"});
-            pc.addTransceiver("audio", {direction: "recvonly"});    //if you want to receive audio
-            pcRef.current = pc;
+            // pc.addTransceiver("video", {direction: "recvonly"});
+            // pc.addTransceiver("audio", {direction: "recvonly"});    //if you want to receive audio
+            pcRef2.current = pc;
+            getUserMedia2();
         }
 
         else{
@@ -200,10 +253,16 @@ function App (){
                         sx={{ margin: 1}}
                 /> */}
                 <Button variant="contained" color="primary" onClick={() => setRole("sender")} sx={{margin: 1, width: "max-content"}}>
-                    Start Stream
+                    I'm One
+                </Button>
+                <Button variant="contained" color="primary" onClick={handleStartStreaming1} sx={{margin: 1, width: "max-content"}}>
+                    Start Streaming
                 </Button>
                 <Button variant="contained" color="primary" onClick={() => setRole("viewer")} sx={{margin: 1, width: "max-content"}}>
-                    View Stream
+                    I'm Two
+                </Button>
+                <Button variant="contained" color="primary" onClick={handleStartStreaming2} sx={{margin: 1, width: "max-content"}}>
+                    Start Streaming
                 </Button>
             </div>
         </div>
